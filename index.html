@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memos Buchungs-Quiz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: eine schmale Lernspalte wie ein Karteikarten-Stapel; Schiefer-Neutrale, Kupfer als Akzent (Dachrinne) */
+:root {
+  --bg: #eef1f2; --surface: #ffffff; --ink: #1c2830; --muted: #5a6a74; --line: #d3dbdf;
+  --accent: #a85a24; --accent-soft: #f5e6da; --ok: #2b7a4b; --ok-soft: #e1f2e7; --bad: #b13a31; --bad-soft: #f9e3e1;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171b; --surface: #1a2329; --ink: #e5ebee; --muted: #93a3ac; --line: #2c3a42;
+  --accent: #d98b52; --accent-soft: #3a2a1f; --ok: #63c08a; --ok-soft: #173326; --bad: #ea7d73; --bad-soft: #3b1f1d; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171b; --surface: #1a2329; --ink: #e5ebee; --muted: #93a3ac; --line: #2c3a42;
+  --accent: #d98b52; --accent-soft: #3a2a1f; --ok: #63c08a; --ok-soft: #173326; --bad: #ea7d73; --bad-soft: #3b1f1d; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px }
+.wrap { max-width: 680px; margin: 0 auto; display: grid; gap: 18px }
+header { display: grid; gap: 6px }
+.eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700 }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 7vw, 40px); line-height: 1.05; margin: 0; text-wrap: balance }
+.sub { color: var(--muted); margin: 0 }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 16px; font-variant-numeric: tabular-nums; font-size: 15px; color: var(--muted) }
+.stats b { color: var(--ink) }
+
+.controls { display: grid; gap: 10px }
+.label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700 }
+.chips { display: flex; flex-wrap: wrap; gap: 8px }
+.chip { font: inherit; font-size: 15px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink) }
+.chip:disabled { opacity: .45; cursor: not-allowed }
+.chip:focus-visible, .opt:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 16px; min-width: 0 }
+.meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums }
+.tag { background: var(--accent-soft); color: var(--accent); font-weight: 700; padding: 2px 10px; border-radius: 6px; font-size: 13px }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s }
+.q { font-family: var(--display); font-weight: 600; font-size: clamp(19px, 4.6vw, 22px); line-height: 1.3; margin: 0; text-wrap: pretty }
+.opts { display: grid; gap: 10px }
+.opt { font: inherit; text-align: left; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 12px 14px;
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums }
+.opt:hover:not(:disabled) { border-color: var(--accent) }
+.opt .k { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: var(--bg); font-weight: 700; font-size: 14px; color: var(--muted) }
+.opt:disabled { cursor: default }
+.opt.right { border-color: var(--ok); background: var(--ok-soft) }
+.opt.right .k { background: var(--ok); color: var(--surface) }
+.opt.wrong { border-color: var(--bad); background: var(--bad-soft) }
+.opt.wrong .k { background: var(--bad); color: var(--surface) }
+.fb { border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px }
+.fb.ok { background: var(--ok-soft) } .fb.no { background: var(--bad-soft) }
+.fb strong { font-size: 17px } .fb.ok strong { color: var(--ok) } .fb.no strong { color: var(--bad) }
+.fb p { margin: 0 }
+.row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end }
+.btn { font: inherit; font-weight: 700; padding: 11px 20px; border-radius: 10px; border: 0; background: var(--accent); color: var(--surface); cursor: pointer }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line) }
+.end h2 { font-family: var(--display); font-size: 28px; margin: 0 }
+.score { font-family: var(--display); font-size: 56px; font-weight: 800; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums }
+.review { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none }
+.review li { border-left: 3px solid var(--bad); padding: 4px 0 4px 12px }
+.review .a { color: var(--ok); font-weight: 600 }
+.hint { font-size: 14px; color: var(--muted); margin: 0 }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Buchführung · Dachdecker-Meisterschule</div>
+    <h1>Memos Buchungs-Quiz</h1>
+    <p class="sub">Kurze Runden für zwischendurch. Nach jeder Antwort gibt es die Erklärung. Was du falsch hast, merkt sich das Quiz und fragt es wieder ab.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section class="controls" aria-label="Auswahl">
+    <div class="label">Thema</div>
+    <div class="chips" id="topics"></div>
+    <div class="label">Modus</div>
+    <div class="chips" id="modes"></div>
+  </section>
+
+  <section class="card" id="card" aria-live="polite"></section>
+  <p class="hint">Tastatur: 1–4 wählt eine Antwort, Enter geht weiter.</p>
+</div>
+
+<script>
+const TOPICS = { grund: 'Grundlagen', ust: 'Umsatzsteuer', skonto: 'Skonto & Nachlass', lohn: 'Löhne', afa: 'AfA & GWG', abschluss: 'Abschluss & Rückstellungen', privat: 'Privat & 1 %-Regel' };
+// Jede Frage: Thema, Frage, Antworten (die erste ist richtig), Erklärung
+const RAW = [
+ ['grund','Welche Seite der Bilanz zeigt das Vermögen des Betriebs?',['Die Aktivseite','Die Passivseite','Die GuV','Das Privatkonto'],'Aktiva = „Was habe ich?" (Anlage- und Umlaufvermögen). Passiva = „Wem gehört es?" (Eigen- und Fremdkapital).'],
+ ['grund','Was steht auf der Passivseite der Bilanz?',['Eigenkapital und Fremdkapital','Anlage- und Umlaufvermögen','Aufwand und Ertrag','Nur die Bankschulden'],'Passiva zeigen, woher das Geld kommt: vom Chef (Eigenkapital) oder von anderen (Fremdkapital, z. B. Darlehen, Lieferanten, Rückstellungen).'],
+ ['grund','Wo steht der Anfangsbestand eines Aktivkontos (z. B. Bank)?',['Im Soll','Im Haben','Gar nicht, Aktivkonten haben keinen Anfangsbestand','In der GuV'],'Aktivkonten: Anfangsbestand und Zugänge im Soll, Abgänge im Haben.'],
+ ['grund','Das Darlehen (Passivkonto) wird größer. Auf welcher Seite buchst du?',['Haben','Soll','Auf beiden Seiten','In der GuV'],'Passivkonten werden im Haben mehr und im Soll weniger. Schulden entstehen im Haben.'],
+ ['grund','Auf welcher Seite werden Aufwendungen (z. B. Löhne, Miete) gebucht?',['Immer im Soll','Immer im Haben','Kommt auf den Betrag an','Im Haben, wenn per Bank bezahlt'],'Aufwand = Eigenkapitalminderung → immer Soll. Ohne Ausnahme.'],
+ ['grund','Auf welcher Seite werden Erträge (z. B. Umsatzerlöse) gebucht?',['Immer im Haben','Immer im Soll','Im Soll, wenn der Kunde bar zahlt','In der Bilanz'],'Ertrag = Eigenkapitalmehrung → immer Haben.'],
+ ['grund','Wie lautet die Grundregel jedes Buchungssatzes?',['Soll an Haben','Haben an Soll','Aktiv an Passiv','Bank an Kasse'],'Erst das Soll-Konto, dann „an", dann das Haben-Konto. Summe Soll = Summe Haben.'],
+ ['grund','Wir heben 500 € von der Bank ab und legen sie in die Kasse.',['1000 Kasse an 1210 Bank','1210 Bank an 1000 Kasse','1800 Privat an 1210 Bank','1000 Kasse an 1800 Privat'],'Kasse wird mehr (Soll), Bank wird weniger (Haben). Das ist ein Aktivtausch.'],
+ ['grund','Wir überweisen eine offene Lieferantenrechnung über 1.190 €.',['1600 Verbindlichkeiten an 1210 Bank','1210 Bank an 1600 Verbindlichkeiten','1400 Forderungen an 1210 Bank','3030 Materialeinkauf an 1210 Bank'],'Die Schuld beim Lieferanten (1600, Passivkonto) wird kleiner → Soll. Geld geht von der Bank → Haben. Material und Vorsteuer wurden schon beim Rechnungseingang gebucht.'],
+ ['grund','Welche Bilanzveränderung ist eine Privatentnahme aus der Kasse?',['Aktiv-Passiv-Minderung','Aktivtausch','Passivtausch','Aktiv-Passiv-Mehrung'],'Kasse (Aktiva) sinkt und Eigenkapital (Passiva) sinkt. Beide Seiten werden kleiner.'],
+ ['grund','Wir nehmen ein Darlehen auf, das Geld kommt aufs Bankkonto. Welche Bilanzveränderung?',['Aktiv-Passiv-Mehrung','Aktivtausch','Passivtausch','Aktiv-Passiv-Minderung'],'Bank (Aktiva) steigt und Darlehen (Passiva) steigt. Die Bilanzsumme wird größer.'],
+ ['grund','Wie wird Material im Meisterkurs gebucht?',['Sofort als Aufwand auf 3030 Materialeinkauf','Als Lagerbestand auf 3970','Als Anlagevermögen auf 0200','Als Privatentnahme'],'Laut Skript wird „just in time" gebucht: Man tut so, als würde das Material sofort auf der Baustelle verbaut.'],
+ ['grund','Darlehensrate: 3.000 € Tilgung und 450 € Zinsen. Was davon ist Aufwand?',['Nur die 450 € Zinsen','Die ganzen 3.450 €','Nur die 3.000 € Tilgung','Gar nichts'],'Die Tilgung macht nur die Schuld kleiner (0650 im Soll). Die Zinsen sind Aufwand (2100 Zinsaufwendungen).'],
+ ['grund','Was passiert am Jahresende mit dem Gewinn aus der GuV?',['Er erhöht das Eigenkapital (Haben-Seite)','Er wird auf das Bankkonto gebucht','Er wird zu Fremdkapital','Er wird als Aufwand gebucht'],'Gewinn mehrt das Eigenkapital → Haben. Ein Verlust mindert es → Soll.'],
+
+ ['ust','Eine Rechnung lautet über 1.190 € brutto. Wie hoch ist der Nettobetrag?',['1.000,00 €','963,90 €','1.171,00 €','1.416,10 €'],'Netto = Brutto : 1,19. Achtung: Brutto × 0,81 (= 963,90) ist falsch!'],
+ ['ust','Netto 2.500 €. Wie hoch ist der Bruttobetrag?',['2.975,00 €','2.519,00 €','2.025,00 €','2.950,00 €'],'Brutto = Netto × 1,19 = 2.975,00 €.'],
+ ['ust','Was ist die Vorsteuer (1576) für den Betrieb?',['Eine Forderung ans Finanzamt (Aktivkonto)','Eine Schuld ans Finanzamt (Passivkonto)','Ein Aufwand','Ein Ertrag'],'Die Vorsteuer haben wir beim Einkauf bezahlt und bekommen sie vom Finanzamt zurück → Forderung.'],
+ ['ust','Was ist die Umsatzsteuer (1776) aus unseren Ausgangsrechnungen?',['Eine Schuld ans Finanzamt (Passivkonto)','Eine Forderung ans Finanzamt','Ein Ertrag','Ein Teil der Umsatzerlöse'],'Wir kassieren die Steuer beim Kunden nur für das Finanzamt ein → Verbindlichkeit.'],
+ ['ust','Welchen Einfluss hat die Umsatzsteuer auf den Gewinn?',['Keinen, sie ist nur ein Durchlaufposten','Sie erhöht den Gewinn','Sie mindert den Gewinn','Nur am Jahresende einen'],'USt und VSt laufen nur über Bestandskonten. Der Betrieb gibt die Steuer nur weiter.'],
+ ['ust','Umsatzsteuer 7.339,70 €, Vorsteuer 3.705,00 €. Was liegt vor?',['Zahllast von 3.634,70 €','Vorsteuerüberhang von 3.634,70 €','Zahllast von 11.044,70 €','Zahllast von 3.705,00 €'],'USt größer als VSt → Zahllast = USt – VSt.'],
+ ['ust','Die Vorsteuer ist im Dezember größer als die Umsatzsteuer. Wo steht der Unterschied in der Schlussbilanz?',['Aktivseite, Umlaufvermögen (Forderung ans Finanzamt)','Passivseite, Fremdkapital','In der GuV als Ertrag','Gar nicht'],'Vorsteuerüberhang = das Finanzamt schuldet uns Geld → Forderung → Aktiva.'],
+ ['ust','Überweisung der Umsatzsteuerschuld ans Finanzamt: 1.799 €.',['1776 Umsatzsteuer an 1210 Bank','1210 Bank an 1776 Umsatzsteuer','1576 Vorsteuer an 1210 Bank','1776 Umsatzsteuer an 1576 Vorsteuer'],'Die Schuld (1776) wird bezahlt → Soll. Geld geht von der Bank → Haben. (Originalaufgabe aus der Klausur!)'],
+ ['ust','Ausgangsrechnung Dachsanierung 24.000 € netto + 19 % USt, Kunde zahlt später.',['1400 Ford. 28.560 an 8000 Umsatz 24.000 + 1776 USt 4.560','1210 Bank 28.560 an 8000 Umsatz 28.560','1400 Ford. 28.560 an 8000 Umsatz 28.560','8000 Umsatz 24.000 + 1776 USt 4.560 an 1400 Ford. 28.560'],'Forderung brutto im Soll, Erlös netto und USt getrennt im Haben.'],
+ ['ust','Bis wann muss die Umsatzsteuer-Voranmeldung abgegeben werden?',['Bis zum 10. des Folgemonats','Bis zum 31.12.','Bis Ende des Quartals','Sofort nach jeder Rechnung'],'Monatlich, jeweils bis zum 10. für den Vormonat.'],
+ ['ust','Materialkauf 6.500 € netto auf Ziel. Wo stehen die 1.235 € Steuer?',['1576 Vorsteuer im Soll','1776 Umsatzsteuer im Haben','1576 Vorsteuer im Haben','Bei 3030 Materialeinkauf mit drin'],'Beim Einkauf entsteht Vorsteuer (Forderung) → Soll. Die 7.735 € brutto stehen bei 1600 im Haben.'],
+
+ ['skonto','Ein Kunde zahlt 49.990 € brutto abzüglich 2 % Skonto. Wie viel kommt auf der Bank an?',['48.990,20 €','49.149,83 €','49.830,37 €','47.990,20 €'],'49.990 × 2 % = 999,80 € Skonto brutto. 49.990 – 999,80 = 48.990,20 €.'],
+ ['skonto','Der Skonto beträgt 999,80 € brutto. Wie hoch ist der Netto-Skonto?',['840,17 €','809,84 €','999,80 €','1.189,76 €'],'999,80 : 1,19 = 840,17 €. Der Rest (159,63 €) ist die Korrektur der Umsatzsteuer.'],
+ ['skonto','Ein Kunde zieht bei der Zahlung Skonto ab. Welches Konto nimmst du?',['8736 Gewährte Skonti','3736 Erhaltene Skonti','8720 Erlösschmälerungen','4900 Sonstige Aufwendungen'],'„Gewährt" = wir geben dem Kunden Rabatt. Das mindert unsere Umsatzerlöse.'],
+ ['skonto','Wir ziehen bei der Zahlung an den Lieferanten Skonto ab. Welches Konto?',['3736 Erhaltene Skonti','8736 Gewährte Skonti','8720 Erlösschmälerungen','2640 Zinserträge'],'„Erhalten" = wir bekommen Rabatt. Das mindert unseren Materialeinkauf.'],
+ ['skonto','Kunde zahlt mit Skonto. Welches Steuerkonto wird zusätzlich korrigiert?',['1776 Umsatzsteuer im Soll','1576 Vorsteuer im Haben','1776 Umsatzsteuer im Haben','Keins'],'Unser Umsatz wird kleiner, also auch unsere Umsatzsteuerschuld → 1776 wird weniger → Soll.'],
+ ['skonto','Wir zahlen mit Skonto (Nettoverfahren). Wo steht die Vorsteuer-Korrektur?',['1576 Vorsteuer im Haben','1576 Vorsteuer im Soll','1776 Umsatzsteuer im Soll','Gar nicht'],'Wir haben weniger bezahlt, also bekommen wir weniger Vorsteuer zurück → 1576 wird weniger → Haben.'],
+ ['skonto','Was bedeutet „Bruttoverfahren" beim Skonto?',['Skonto zuerst komplett brutto auf das Skontokonto, Steuer später gesammelt berichtigen','Skonto wird gar nicht gebucht','Skonto wird sofort in netto und Steuer aufgeteilt','Skonto wird als Umsatzerlös gebucht'],'Sofort aufteilen = Nettoverfahren. Erst brutto, später berichtigen = Bruttoverfahren. Beide musst du kennen.'],
+ ['skonto','Kunde reklamiert einen Mangel und bekommt 595 € brutto Nachlass.',['8720 Erlösschm. 500 + 1776 USt 95 an 1400 Ford. 595','8736 Gewährte Skonti 595 an 1400 Ford. 595','1400 Ford. 595 an 8720 Erlösschm. 595','8720 Erlösschm. 595 an 1400 Ford. 595'],'Nachlass wegen Mangel → 8720 Erlösschmälerungen (netto) plus Umsatzsteuer-Korrektur.'],
+ ['skonto','Wir schicken mangelhaftes Material zurück: 535,50 € brutto.',['1600 Verb. 535,50 an 3030 Material 450 + 1576 VSt 85,50','3030 Material 450 + 1576 VSt 85,50 an 1600 Verb. 535,50','1600 Verb. an 1210 Bank 535,50','1400 Ford. an 3030 Material 535,50'],'Die ursprüngliche Einkaufsbuchung wird einfach rückwärts gebucht.'],
+ ['skonto','Wir zahlen 3.570 € brutto mit 3 % Skonto. Wie hoch ist der Netto-Skonto?',['90,00 €','107,10 €','86,75 €','17,10 €'],'3.570 × 3 % = 107,10 brutto → 107,10 : 1,19 = 90,00 netto → 17,10 Vorsteuer.'],
+
+ ['lohn','Umbuchung des Arbeitgeberanteils zur Sozialversicherung: 772,20 €.',['4130 Ges. Sozialaufwendungen an 1742 Verb. Sozialkassen','1742 Verb. Sozialkassen an 4130 Ges. Sozialaufwendungen','4100 Löhne an 1742 Verb. Sozialkassen','4130 Ges. Sozialaufwendungen an 1210 Bank'],'Der AG-Anteil ist Aufwand (Soll), die Schuld an die Krankenkasse entsteht (Haben). In der Klausur war das verdreht und hat 2 Punkte gekostet!'],
+ ['lohn','Auf welches Konto kommen die einbehaltene Lohn- und Kirchensteuer?',['1741 Verbindlichkeiten Lohn- und Kirchensteuer','1742 Verbindlichkeiten Sozialkassen','1776 Umsatzsteuer','4100 Löhne und Gehälter'],'Die Steuern behält der Chef ein und schuldet sie dem Finanzamt → 1741.'],
+ ['lohn','Wo steht der Bruttolohn in der Lohnbuchung?',['4100 Löhne und Gehälter im Soll','4100 Löhne und Gehälter im Haben','1210 Bank im Soll','1741 im Soll'],'Der volle Bruttolohn ist Aufwand. Im Haben stehen 1741, 1742 und das Netto über die Bank.'],
+ ['lohn','Bruttolohn 2.453 €, AG-Anteil Sozialversicherung 512,68 €. Was kostet der Mitarbeiter den Betrieb?',['2.965,68 €','2.453,00 €','1.940,32 €','1.614,32 €'],'Bruttolohn + AG-Anteil = 2.965,68 €.'],
+ ['lohn','Bis wann muss die einbehaltene Lohnsteuer ans Finanzamt?',['Bis zum 10. des Folgemonats','Am drittletzten Bankarbeitstag','Bis zum 31.12.','Bis zum 15. des Folgemonats'],'Lohnsteuer: bis zum 10. des Folgemonats (Buchung 1741 an 1210).'],
+ ['lohn','Wann sind die Sozialversicherungsbeiträge fällig?',['Am drittletzten Bankarbeitstag des laufenden Monats','Bis zum 10. des Folgemonats','Am Jahresende','Wenn der Mitarbeiter es verlangt'],'So steht es im Skript: drittletzter Bankarbeitstag des laufenden Monats.'],
+ ['lohn','Was überweist der Betrieb an die Krankenkasse (1742 an 1210)?',['AN-Anteil und AG-Anteil zusammen','Nur den AG-Anteil','Nur den AN-Anteil','Lohnsteuer und Sozialversicherung'],'Auf 1742 sammeln sich beide Anteile. Bezahlt wird die Summe.'],
+ ['lohn','Wie hoch ist der Beitragssatz zur Rentenversicherung insgesamt?',['18,6 % (je 9,3 % AG und AN)','14,6 %','2,6 %','3,6 %'],'14,6 % = Krankenversicherung, 3,6 % = Pflegeversicherung, 2,6 % = Arbeitslosenversicherung.'],
+ ['lohn','Ein kinderloser Arbeitnehmer ist 27. Was zahlt er in der Pflegeversicherung?',['2,4 % (1,8 % + 0,6 % Zuschlag)','1,8 %','3,6 %','1,55 %'],'Kinderlose ab 23 zahlen 0,6 % Zuschlag. Der AG-Anteil bleibt bei 1,8 %.'],
+
+ ['afa','Wie berechnet man die lineare Abschreibung pro Jahr?',['Anschaffungskosten : Nutzungsdauer','Anschaffungskosten × Nutzungsdauer','Bruttopreis : Nutzungsdauer','Anschaffungskosten : 12'],'Linear = jedes Jahr gleich viel. Die Anschaffungskosten sind immer netto.'],
+ ['afa','PKW mit Anschaffungskosten 24.000 €, Nutzungsdauer 6 Jahre. Jährliche AfA?',['4.000 €','2.400 €','6.000 €','1.440 €'],'24.000 : 6 = 4.000 € pro Jahr (= 16,67 %).'],
+ ['afa','Gekauft am 11.03. Wie viele Monate werden im ersten Jahr abgeschrieben?',['10','9','9,5','12'],'Der Kaufmonat zählt voll: März bis Dezember = 10 Monate. Trick: 13 – 3 = 10.'],
+ ['afa','PKW: AK 18.000 €, ND 6 Jahre, Kauf am 30.11.2023. Bilanzwert am 01.01.2024?',['17.500 €','15.000 €','17.750 €','18.000 €'],'3.000 € AfA pro Jahr, 2023 nur November + Dezember = 500 €. 18.000 – 500 = 17.500 €.'],
+ ['afa','Bautrockner gekauft am 11.03.2024 für 4.500 €. Bilanzwert am 01.01.2024?',['0 €','4.500 €','4.000 €','4.083,33 €'],'Am 01.01.2024 war das Gerät noch gar nicht im Betrieb. Klassische Klausurfalle!'],
+ ['afa','Wie wird die Abschreibung eines PKW gebucht?',['4832 AfA Fuhrpark an 0320 PKW','0320 PKW an 4832 AfA Fuhrpark','4830 AfA TAM an 0320 PKW','4832 AfA Fuhrpark an 1210 Bank'],'Aufwand im Soll, das Anlagekonto wird kleiner → Haben. Es fließt kein Geld!'],
+ ['afa','Gehört die Umsatzsteuer zu den Anschaffungskosten?',['Nein, die Anschaffungskosten sind immer netto','Ja, immer','Nur beim PKW','Nur bei GWG'],'Die Umsatzsteuer holen wir als Vorsteuer zurück. Sie gehört nicht zu den Anschaffungskosten.'],
+ ['afa','Gehören Kreditzinsen für die Finanzierung zu den Anschaffungskosten?',['Nein','Ja','Nur im ersten Jahr','Nur beim LKW'],'Finanzierungskosten gehören laut Skript nicht dazu. Sie sind Zinsaufwand.'],
+ ['afa','Gehören Überführung und Zulassung zu den Anschaffungskosten?',['Ja, als Anschaffungsnebenkosten','Nein, das sind Fahrzeugkosten','Nur die Zulassung','Nur die Überführung'],'Alles, was nötig ist, um das Anlagegut einsatzbereit zu machen, gehört dazu.'],
+ ['afa','Bis zu welchem Betrag ist ein Gegenstand ein GWG, das sofort abgeschrieben wird?',['800 € netto','800 € brutto','1.000 € netto','250 € netto'],'Die Grenze ist netto! Immer zuerst Brutto : 1,19 rechnen.'],
+ ['afa','Barkauf eines Styropor-Schneidgeräts für 897 € brutto.',['4855 GWG 753,78 + 1576 VSt 143,22 an 1000 Kasse 897','0200 TAM 753,78 + 1576 VSt 143,22 an 1000 Kasse 897','4855 GWG 897 an 1000 Kasse 897','4855 GWG 753,78 + 1576 VSt 143,22 an 1210 Bank 897'],'897 : 1,19 = 753,78 € netto → unter 800 → GWG. „Bar" → Kasse. Originalaufgabe aus der Klausur!'],
+ ['afa','Laptop fürs Büro für 1.428 € brutto per Überweisung. Wie wird er erfasst?',['0400 BGA 1.200 + 1576 VSt 228 an 1210 Bank','4855 GWG 1.200 + 1576 VSt 228 an 1210 Bank','4925 Telefon 1.428 an 1210 Bank','3030 Material 1.200 + 1576 VSt 228 an 1210 Bank'],'1.428 : 1,19 = 1.200 € netto → über 800 → aktivieren. Büro = Betriebs- und Geschäftsausstattung.'],
+ ['afa','Laser-Entfernungsmesser für genau 952 € brutto. GWG oder nicht?',['GWG, denn netto sind es genau 800 €','Kein GWG, denn brutto ist es über 800 €','Kein GWG, denn 800 € ist schon zu viel','Das ist Material'],'952 : 1,19 = 800,00 €. „Bis 800 €" heißt: 800 € ist noch drin.'],
+ ['afa','Was bewirkt eine Abschreibung in der Bilanz?',['Anlagevermögen sinkt, Eigenkapital sinkt über den geringeren Gewinn','Die Bank wird weniger','Das Fremdkapital steigt','Die Bilanzsumme steigt'],'Aktiv-Passiv-Minderung. Aufwand → weniger Gewinn → weniger Eigenkapital und weniger Steuern.'],
+ ['afa','Fließt bei einer Abschreibung Geld vom Bankkonto ab?',['Nein','Ja, jedes Jahr','Nur im Kaufjahr','Nur bei GWG'],'Abschreibung ist ein reiner Wertverlust. Bezahlt wurde schon beim Kauf.'],
+ ['afa','Welche Nutzungsdauer hat ein PKW laut AfA-Tabelle?',['6 Jahre','9 Jahre','5 Jahre','3 Jahre'],'PKW 6 Jahre, LKW 9 Jahre (so im Skript).'],
+ ['afa','Wie verhalten sich Bilanzwert am 31.12. und Bilanzwert am 01.01. des Folgejahres?',['Sie sind gleich','Am 01.01. ist schon die AfA des neuen Jahres abgezogen','Am 01.01. ist der Wert wieder der Anschaffungswert','Am 01.01. ist er immer 0 €'],'Dazwischen liegt nur eine Nacht. Die AfA des neuen Jahres kommt erst am Jahresende.'],
+ ['afa','Eine Palette Dachziegel für eine Baustelle kostet 714 € brutto. Was ist das?',['Material (3030), kein Anlagegut','Ein GWG (4855)','Technische Anlagen (0200)','Betriebsausstattung (0400)'],'Dachziegel werden verbaut und nicht mehrere Jahre genutzt. Also kein Anlagegut und kein GWG.'],
+
+ ['abschluss','Wie werden halbfertige Arbeiten am 31.12. gebucht?',['7090 Halbfertige Arbeiten an 8975 Bestandsveränderungen','8975 Bestandsveränderungen an 7090 Halbfertige Arbeiten','7090 Halbfertige Arbeiten an 8000 Umsatzerlöse','1400 Forderungen an 8975 Bestandsveränderungen'],'7090 ist ein Aktivkonto (wird mehr → Soll), 8975 ist ein Ertrag (Haben).'],
+ ['abschluss','In welcher Höhe werden halbfertige Arbeiten erfasst?',['In Höhe der bereits angefallenen Kosten','In Höhe des Auftragspreises','Kosten plus Gewinnaufschlag','Die Hälfte des Angebots'],'Nur was schon an Löhnen, Material, Fahrzeugkosten usw. für die Baustelle angefallen ist.'],
+ ['abschluss','Wo stehen halbfertige Arbeiten in der Bilanz?',['Aktivseite, Umlaufvermögen','Aktivseite, Anlagevermögen','Passivseite, Fremdkapital','Gar nicht, nur in der GuV'],'Sie sind ein zusätzlicher Vermögenswert, der bald zu einer Forderung wird.'],
+ ['abschluss','Was für ein Konto ist 8975 Bestandsveränderungen?',['Ein Ertragskonto','Ein Aufwandskonto','Ein Bestandskonto','Ein Privatkonto'],'Der Ertrag gleicht die schon gebuchten Kosten der Baustelle in der GuV aus.'],
+ ['abschluss','Was passiert, wenn halbfertige Arbeiten vergessen werden?',['Der Gewinn ist zu niedrig und es werden zu wenig Steuern gezahlt','Der Gewinn ist zu hoch','Nichts, das wird automatisch korrigiert','Die Umsatzsteuer ist falsch'],'Kosten sind gebucht, aber der Gegenwert fehlt. Das Finanzamt macht das nicht mit.'],
+ ['abschluss','Rückstellungen sind …',['Fremdkapital','Eigenkapital','Vermögen auf der Aktivseite','Ein Ertrag'],'Rückstellungen sind Schulden, deren Höhe und Fälligkeit noch unsicher sind.'],
+ ['abschluss','Was ist der Unterschied zwischen Rückstellungen und Rücklagen?',['Rückstellungen sind Fremdkapital, Rücklagen sind Eigenkapital','Das ist dasselbe','Rücklagen sind Fremdkapital, Rückstellungen Eigenkapital','Rücklagen stehen auf der Aktivseite'],'Beliebte Prüfungsfrage. Nicht verwechseln!'],
+ ['abschluss','Gewährleistungsrückstellung 2 % vom Umsatz 1.135.700 €. Buchung?',['4790 Gewährleistungsaufwand an 0974 Gewährleistungsrückst. 22.714','0974 Gewährleistungsrückst. an 4790 Gewährleistungsaufwand 22.714','4790 Gewährleistungsaufwand an 1210 Bank 22.714','4790 Gewährleistungsaufwand an 0974 Gewährleistungsrückst. 2.271,40'],'1.135.700 × 2 % = 22.714 €. Aufwand an Rückstellung.'],
+ ['abschluss','Steuerrückstellung 1.800 €. Der Bescheid kommt über 1.300 €. Was entsteht?',['Ein Ertrag von 500 €','Ein Aufwand von 500 €','Nichts','Ein Ertrag von 1.300 €'],'Die Rückstellung war zu hoch → der Rest ist ein Ertrag aus der Herabsetzung von Rückstellungen.'],
+ ['abschluss','Steuerrückstellung 1.800 €. Der Bescheid kommt über 2.800 €. Was entsteht?',['Zusätzlicher Aufwand von 1.000 € (4310)','Ein Ertrag von 1.000 €','Nichts, die Rückstellung deckt alles','Zusätzlicher Aufwand von 2.800 €'],'Buchung: 0956 1.800 + 4310 1.000 an 1210 Bank 2.800.'],
+ ['abschluss','Rückstellung für eine erwartete Gewerbesteuer-Nachzahlung. Welche Buchung?',['4310 Steuern an 0956 Steuerrückstellungen','0956 Steuerrückstellungen an 4310 Steuern','4310 Steuern an 1210 Bank','1800 Privat an 0956 Steuerrückstellungen'],'Aufwandskonto 4310 (Steuern, Gebühren, Beiträge, Versicherungen) an 0956.'],
+ ['abschluss','Rückstellung für die Steuerberaterkosten des Jahresabschlusses. Welche Buchung?',['4950 Rechts- und Beratungskosten an 0977 Rückst. Abschlusskosten','0977 Rückst. Abschlusskosten an 4950 Rechts- und Beratungskosten','4950 Rechts- und Beratungskosten an 1600 Verbindlichkeiten','4310 Steuern an 0956 Steuerrückstellungen'],'Im Kontenrahmen gibt es eigens 0977 Rückstellungen für Abschluss- und Prüfkosten.'],
+
+ ['privat','Der Chef nimmt 350 € bar aus der Kasse für Lebensmittel.',['1800 Privatentnahmen an 1000 Kasse','4900 Sonst. Aufwendungen an 1000 Kasse','1000 Kasse an 1800 Privat','1800 Privatentnahmen an 8910 Entnahme'],'Private Geldentnahme → Privatkonto im Soll, Kasse im Haben. Keine Umsatzsteuer.'],
+ ['privat','Der Chef überweist seine Einkommensteuer vom Firmenkonto.',['1800 Privatentnahmen an 1210 Bank','4310 Steuern an 1210 Bank','4900 Sonst. Aufwendungen an 1210 Bank','0956 Steuerrückstellungen an 1210 Bank'],'Die Einkommensteuer ist immer privat.'],
+ ['privat','Der Chef legt einen Lottogewinn von 2.000 € bar in den Betrieb ein.',['1000 Kasse an 1800 Privateinlagen','1800 Privat an 1000 Kasse','1000 Kasse an 2500 Außerordentliche Erträge','1000 Kasse an 8000 Umsatzerlöse'],'Privateinlage: Kasse wird mehr (Soll), Eigenkapital über das Privatkonto wird mehr (Haben).'],
+ ['privat','Der Chef nimmt Material für 1.000 € netto für das Dach seines Privathauses.',['1800 Privat 1.190 an 8910 Entnahme 1.000 + 1776 USt 190','1800 Privat 1.000 an 3030 Material 1.000','1800 Privat 1.000 an 8910 Entnahme 1.000','3030 Material 1.000 an 1800 Privat 1.000'],'Sachentnahme = wie ein Verkauf an einen Kunden → mit Umsatzsteuer, Erlös auf 8910.'],
+ ['privat','Bei der Inventur fehlen 300 € in der Kasse.',['1800 Privatentnahmen an 1000 Kasse','4900 Sonst. Aufwendungen an 1000 Kasse','1000 Kasse an 1800 Privat','Gar nicht buchen'],'Das Finanzamt unterstellt eine nicht aufgeschriebene Privatentnahme.'],
+ ['privat','Wie wirkt eine Privatentnahme auf die Bilanz?',['Vermögen sinkt und Eigenkapital sinkt','Vermögen sinkt und Fremdkapital steigt','Nur das Eigenkapital sinkt','Der Gewinn sinkt'],'Aktiv-Passiv-Minderung, die Bilanzsumme wird kleiner.'],
+ ['privat','Verändert eine Geldentnahme des Chefs den Gewinn?',['Nein','Ja, sie mindert den Gewinn','Ja, sie erhöht den Gewinn','Nur am Jahresende'],'Das Privatkonto hat nichts mit der GuV zu tun. Es wird über das Eigenkapital abgeschlossen.'],
+ ['privat','Was ist die Basis der 1 %-Regel?',['Der Bruttolistenpreis bei Erstzulassung','Der Netto-Listenpreis','Der Kaufpreis des Gebrauchtwagens','Der aktuelle Buchwert'],'Immer der Bruttolistenpreis als Neuwagen, auch wenn das Auto gebraucht gekauft wurde.'],
+ ['privat','Bruttolistenpreis 37.950 €. Wie hoch ist der Jahreswert (Schritt 1)?',['4.554,00 €','3.826,89 €','379,50 €','455,40 €'],'37.950 × 1 % × 12 = 4.554 €. Nicht durch 1,19 teilen (3.826,89 wäre der Fehler aus der Klausur)!'],
+ ['privat','Wofür werden bei der 1 %-Regel pauschal 20 % abgezogen?',['Für Kosten ohne Vorsteuer, z. B. Kfz-Versicherung und Kfz-Steuer','Für die Abnutzung des Autos','Für die betrieblichen Fahrten','Für die Umsatzsteuer'],'Auf diese 20 % fällt keine Umsatzsteuer an. Sie werden aber trotzdem als Entnahme gebucht.'],
+ ['privat','Bruttolistenpreis 37.950 €. Wie hoch ist die gesamte Privatentnahme für das Jahr?',['5.246,21 €','4.335,41 €','4.554,00 €','3.643,20 €'],'4.554 – 910,80 = 3.643,20 → + 19 % USt 692,21 = 4.335,41 → + 910,80 = 5.246,21 €.'],
+ ['privat','Wie wird die Privatentnahme nach der 1 %-Regel gebucht?',['1801 Privat (1 %) an 8910 Entnahme + 1776 Umsatzsteuer','8910 Entnahme an 1801 Privat (1 %)','1801 Privat (1 %) an 4500 Fahrzeugkosten','1801 Privat (1 %) an 1210 Bank'],'Die Privatentnahme steht im Soll, im Haben der Ertrag (8910) und die Umsatzsteuer.'],
+ ['privat','Der Pickup wurde gebraucht für 24.000 € gekauft, der Bruttolistenpreis war 61.450 €. Womit rechnest du?',['Mit 61.450 €','Mit 24.000 €','Mit 61.450 : 1,19','Mit dem Mittelwert'],'Der Kaufpreis ist egal. Es zählt nur der Bruttolistenpreis bei Erstzulassung.'],
+ ['privat','Der Chef kauft Futter für seinen Familienhund mit Geld aus der Firmenkasse.',['1800 Privatentnahmen an 1000 Kasse','4900 Sonst. Aufwendungen an 1000 Kasse','4980 Betriebsbedarf an 1000 Kasse','Gar nicht buchen'],'Privat ist privat. Nur Futter für einen Wachhund des Betriebs dürfte auf 4900 gebucht werden.']
+];
+const Q = RAW.map((r, i) => ({ id: r[0] + '-' + i, t: r[0], q: r[1], a: r[2], e: r[3] }));
+
+// ---------- Speicher (nur in diesem Browser) ----------
+const KEY = 'memo-buchungsquiz-v1';
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+const store = Object.assign({ wrong: [], right: 0, falsch: 0 }, load());
+store.wrong = store.wrong.filter(id => Q.some(q => q.id === id));
+
+// ---------- Zustand ----------
+let topic = 'alle', mode = 'runde', deck = [], pos = 0, answered = false, roundRight = 0, roundWrong = [];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function pool() {
+  let p = topic === 'alle' ? Q : Q.filter(q => q.t === topic);
+  if (mode === 'fehler') p = p.filter(q => store.wrong.includes(q.id));
+  return p;
+}
+function start() {
+  let p = shuffle(pool());
+  if (mode === 'runde') p = p.slice(0, 10);
+  deck = p.map(q => ({ ...q, opts: shuffle(q.a.map((txt, k) => ({ txt, ok: k === 0 }))) }));
+  pos = 0; roundRight = 0; roundWrong = []; answered = false;
+  renderControls(); render();
+}
+
+function renderStats() {
+  const total = store.right + store.falsch;
+  const quote = total ? Math.round(store.right / total * 100) : 0;
+  $('stats').innerHTML = `<span>Beantwortet: <b>${total}</b></span><span>Trefferquote: <b>${quote} %</b></span><span>Offene Fehler: <b>${store.wrong.length}</b></span>`;
+}
+function renderControls() {
+  const t = [['alle', 'Alle Themen'], ...Object.entries(TOPICS)];
+  $('topics').innerHTML = t.map(([k, v]) => `<button class="chip" id="t-${k}" aria-pressed="${k === topic}" data-t="${k}">${v}</button>`).join('');
+  const nf = (topic === 'alle' ? Q : Q.filter(q => q.t === topic)).filter(q => store.wrong.includes(q.id)).length;
+  const m = [['runde', '10er-Runde'], ['alle', 'Alle Fragen'], ['fehler', `Nur meine Fehler (${nf})`]];
+  $('modes').innerHTML = m.map(([k, v]) => `<button class="chip" id="m-${k}" aria-pressed="${k === mode}" data-m="${k}" ${k === 'fehler' && !nf ? 'disabled' : ''}>${v}</button>`).join('');
+  renderStats();
+}
+
+function render() {
+  const card = $('card');
+  if (!deck.length) {
+    card.innerHTML = `<div class="end"><h2>Keine Fehler offen 🎉</h2><p>Hier ist gerade nichts zu wiederholen. Wähl eine 10er-Runde oder ein anderes Thema.</p></div>
+      <div class="row"><button class="btn" id="go-runde">10er-Runde starten</button></div>`;
+    $('go-runde').onclick = () => { mode = 'runde'; start(); };
+    return;
+  }
+  if (pos >= deck.length) return renderEnd();
+  const q = deck[pos];
+  card.innerHTML = `
+    <div class="meta"><span class="tag">${TOPICS[q.t]}</span><span>Frage ${pos + 1} von ${deck.length}</span></div>
+    <div class="bar"><i style="width:${pos / deck.length * 100}%"></i></div>
+    <p class="q">${esc(q.q)}</p>
+    <div class="opts">${q.opts.map((o, k) => `<button class="opt" id="o-${k}" data-k="${k}"><span class="k">${'ABCD'[k]}</span><span>${esc(o.txt)}</span></button>`).join('')}</div>
+    <div id="fb"></div>`;
+  answered = false;
+}
+
+function answer(k) {
+  if (answered || pos >= deck.length) return;
+  answered = true;
+  const q = deck[pos], ok = q.opts[k].ok;
+  q.opts.forEach((o, i) => {
+    const b = $('o-' + i); b.disabled = true;
+    if (o.ok) b.classList.add('right'); else if (i === k) b.classList.add('wrong');
+  });
+  if (ok) { roundRight++; store.right++; store.wrong = store.wrong.filter(id => id !== q.id); }
+  else { roundWrong.push(q); store.falsch++; if (!store.wrong.includes(q.id)) store.wrong.push(q.id); }
+  save(); renderControls();
+  const last = pos === deck.length - 1;
+  $('fb').innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}"><strong>${ok ? 'Richtig!' : 'Leider falsch.'}</strong><p>${esc(q.e)}</p></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="next">${last ? 'Ergebnis ansehen' : 'Weiter'}</button></div>`;
+  $('next').onclick = next; $('next').focus();
+}
+function next() { if (!answered) return; pos++; render(); }
+
+function renderEnd() {
+  const n = deck.length, pct = Math.round(roundRight / n * 100);
+  const msg = pct >= 90 ? 'Stark! Das sitzt.' : pct >= 70 ? 'Gut! Die Fehler unten nochmal anschauen.' : pct >= 50 ? 'Bestanden, aber da geht noch was.' : 'Noch nicht sicher. Lies das Kapitel im Lernheft nochmal und versuch es dann wieder.';
+  $('card').innerHTML = `<div class="end" style="display:grid;gap:10px">
+      <h2>Runde geschafft</h2>
+      <div class="score">${roundRight} / ${n}</div>
+      <p style="margin:0">${msg}</p></div>
+    ${roundWrong.length ? `<div class="label">Das war falsch – so ist es richtig</div>
+      <ul class="review">${roundWrong.map(q => `<li>${esc(q.q)}<br><span class="a">✓ ${esc(q.a[0])}</span></li>`).join('')}</ul>` : ''}
+    <div class="row">
+      ${store.wrong.length ? `<button class="btn ghost" id="go-fehler">Fehler üben</button>` : ''}
+      <button class="btn" id="go-again">Neue Runde</button></div>`;
+  $('go-again').onclick = () => { if (mode === 'fehler') mode = 'runde'; start(); };
+  if ($('go-fehler')) $('go-fehler').onclick = () => { mode = 'fehler'; start(); };
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-t]'), m = e.target.closest('[data-m]'), o = e.target.closest('.opt');
+  if (t) { topic = t.dataset.t; if (mode === 'fehler' && !pool().length) mode = 'runde'; start(); }
+  else if (m && !m.disabled) { mode = m.dataset.m; start(); }
+  else if (o && !o.disabled) answer(+o.dataset.k);
+});
+document.addEventListener('keydown', e => {
+  if (['1', '2', '3', '4'].includes(e.key)) answer(+e.key - 1);
+  else if (e.key === 'Enter' && answered && document.activeElement?.id !== 'next') { e.preventDefault(); next(); }
+});
+start();
+</script>
+</body>
+</html>
